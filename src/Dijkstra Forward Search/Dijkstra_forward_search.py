@@ -2,48 +2,53 @@ from maze_environment import load_level, show_level, save_level_costs
 from math import inf, sqrt
 from heapq import heappop, heappush
 
+def bidirectional_a_star(initial_position, destination, graph, adj):
+    forward_paths = {initial_position: []}
+    forward_pathcosts = {initial_position: 0}
+    forward_queue = []
+    heappush(forward_queue, (0, initial_position))
 
-def dijkstras_shortest_path(initial_position, destination, graph, adj):
-    """ Searches for a minimal cost path through a graph using Dijkstra's algorithm.
+    backward_paths = {destination: []}
+    backward_pathcosts = {destination: 0}
+    backward_queue = []
+    heappush(backward_queue, (0, destination))
 
-    Args:
-        initial_position: The initial cell from which the path extends.
-        destination: The end location for the path.
-        graph: A loaded level, containing walls, spaces, and waypoints.
-        adj: An adjacency function returning cells adjacent to a given cell as well as their respective edge costs.
+    meet_pts = None
 
-    Returns:
-        If a path exits, return a list containing all cells from initial_position to destination.
-        Otherwise, return None.
+    while forward_queue and backward_queue:
+        forward_priority, forward_cell = heappop(forward_queue)
+        backward_priority, backward_cell = heappop(backward_queue)
 
-    """
-    paths = {initial_position: []}          # maps cells to previous cells on path
-    pathcosts = {initial_position: 0}       # maps cells to their pathcosts (found so far)
-    queue = []
-    heappush(queue, (0, initial_position))  # maintain a priority queue of cells
-    
-    while queue:
-        priority, cell = heappop(queue)
-        if cell == destination:
-            return path_to_cell(cell, paths)
-        
-        # investigate children
-        for (child, step_cost) in adj(graph, cell):
-            # calculate cost along this path to child
-            cost_to_child = priority + transition_cost(graph, cell, child)
-            if child not in pathcosts or cost_to_child < pathcosts[child]:
-                pathcosts[child] = cost_to_child            # update the cost
-                paths[child] = cell                         # set the backpointer
-                heappush(queue, (cost_to_child, child))     # put the child on the priority queue
-            
-    return False
+        if forward_cell and backward_cell == destination:
+            return path_to_cell(forward_cell and backward_cell, forward_paths)
+
+        # investigate children in the forward search
+        for (forward_child, step_cost) in adj(graph, forward_cell):
+            forward_cost_to_child = forward_priority + transition_cost(graph, forward_cell, forward_child)
+            if forward_child not in forward_pathcosts or forward_cost_to_child < forward_pathcosts[forward_child]:
+                forward_pathcosts[forward_child] = forward_cost_to_child
+                forward_paths[forward_child] = forward_cell
+                heappush(forward_queue, (forward_cost_to_child, forward_child))
+
+        # investigate children in the backward search
+        for (backward_child, step_cost) in adj(graph, backward_cell):
+            backward_cost_to_child = backward_priority + transition_cost(graph, backward_cell, backward_child)
+            if backward_child not in backward_pathcosts or backward_cost_to_child < backward_pathcosts[backward_child]:
+                backward_pathcosts[backward_child] = backward_cost_to_child
+                backward_paths[backward_child] = backward_cell
+                heappush(backward_queue, (backward_cost_to_child, backward_child))
+
+    if meet_pts is not None:
+        forward_path = path_to_cell(meet_pts, forward_paths)
+        backward_path = path_to_cell(meet_pts, backward_paths)[::-1]  # Reverse the backward path
+        return forward_path + backward_path[1:]  # Exclude the meet_pts for the final path
+    else:
+        return None
 
 def path_to_cell(cell, paths):
     if cell == []:
         return []
     return path_to_cell(paths[cell], paths) + [cell]
-    
-
 
 
 def navigation_edges(level, cell):
@@ -95,7 +100,7 @@ def test_route(filename, src_waypoint, dst_waypoint):
     dst = level['waypoints'][dst_waypoint]
 
     # Search for and display the path from src to dst.
-    path = dijkstras_shortest_path(src, dst, level, navigation_edges)
+    path = bidirectional_a_star(src, dst, level, navigation_edges)
     if path:
         show_level(level, path)
     else:
@@ -107,4 +112,3 @@ if __name__ == '__main__':
 
     # Use this function call to find the route between two waypoints.
     test_route(filename, src_waypoint, dst_waypoint)
-
