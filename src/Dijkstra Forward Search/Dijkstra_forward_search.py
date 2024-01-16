@@ -1,4 +1,4 @@
-from maze_environment import load_level, show_level, save_level_costs
+from maze_environment import load_level, show_level
 from math import inf, sqrt
 from heapq import heappop, heappush
 
@@ -19,8 +19,10 @@ def bidirectional_a_star(initial_position, destination, graph, adj):
         forward_priority, forward_cell = heappop(forward_queue)
         backward_priority, backward_cell = heappop(backward_queue)
 
-        if forward_cell and backward_cell == destination:
-            return path_to_cell(forward_cell and backward_cell, forward_paths)
+        # Check if the forward and backward searches meet
+        if forward_cell in backward_paths:
+            meet_pts = forward_cell
+            break
 
         # investigate children in the forward search
         for (forward_child, step_cost) in adj(graph, forward_cell):
