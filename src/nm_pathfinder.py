@@ -117,6 +117,9 @@ def bidirectional_a_star(src, dst, mesh):
 
     # INITIALIZATION
     src_box, dst_box = find_boxes(src, dst, mesh)   # identifies the boxes containing the source and destination points in the mesh
+    if src_box is None or dst_box is None:          # if either the source or destination box is not found,
+        print("No path!")                           # the function prints an error message
+        return [], {}                               # and returns an empty path
     
     # DISTANCE AND HEURISTIC FUNCTIONS
     def distance(start, end):                       # computes the Euclidean distance between two points
@@ -208,16 +211,9 @@ def bidirectional_a_star(src, dst, mesh):
                     boxes[c] = entry_point
     
     # ERROR HANDLING
-    if not path:
-        print("No path!")                       # if no valid path is found, the function prints an error message
-        path.append(src)                        # and constructs a degenerate path consisting of the source
-        path.append(dst)                        # and destination points
-        boxes[src_box] = True
-        boxes[dst_box] = True
-    
-    if src_box is None or dst_box is None:      # if either the source or destination box is not found,
-        print("No path!")                       # the function prints an error message
-        return [src, dst], {}                   # and constructs a degenerate path consisting of the source and destination points
+    if not path:                # if no valid path is found,
+        print("No path!")       # the function prints an error message
+        return [], {}           # and returns an empty path
     
     # RETURN
     return path, boxes  # returns the final path and the boxes dictionary mapping boxes to detailed points
